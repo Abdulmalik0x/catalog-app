@@ -16,8 +16,15 @@
         <form action="{{url_for('editMenuItem', restaurant_id = restaurant_id, menu_id = menu_id)}}" method="POST">
             
 
-            <p>Enter the new item name :  </p></br> 
-            <input type="text" name="newname" placeholder="{{item.name}}">
+            <p>Edit items </p></br> 
+            <span>Title: </span> <input type="text" name="newname" placeholder="{{item.Title}}">
+            <span>Description: </span> <input type="text" name="newname" placeholder="{{item.description}}">
+            <span>Category: </span> 
+            {% for category in categories %}
+            <select>
+                    <option value="{{category.name}}">{{category.name}}</option>
+    
+                  </select>
             <input type="submit" value="Submit">
 
         </form>

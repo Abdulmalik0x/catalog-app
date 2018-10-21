@@ -309,6 +309,19 @@ def showItems(categoryName):
     return render_template('categoryItems.html', category = category, \
     categoryItems=categoryItems)
 
+@app.route('/catalog/<categoryName>/<itemName>/')
+def showItem(categoryName, itemName):
+    print(itemName)
+    if 'username' not in login_session:
+        return redirect('/login')
+    category = session.query(Categories).filter_by(name=categoryName).first()
+    CategoryItem = session.query(CategoryItems).filter_by(title =itemName , \
+    categoryId = category.id).first()
+    print(CategoryItem)
+    return render_template('categoryItem.html', itemCategory = category, item = CategoryItem)
+
+    
+
 
 @app.route('/catalog/addNewCategory/', methods=['GET', 'POST'])
 def addCategory():
@@ -341,6 +354,30 @@ def addNewCategroyItem(categoryName):
     else:
 
         return render_template('addNewCategroyItem.html', category= category)
+
+
+@app.route('/catalog/<categoryName>/<itemName>/editItem', methods=['GET','POST'])
+def editCategoryItem(categoryName, itemName):
+    if 'username' not in login_session:
+        return redirect('/login')
+    categories = session.query(Categories).all()
+    category = session.query(Categories).filter_by(name = categoryName).first()
+    if request.method == 'POST':
+        # this may add without deleting
+        editedItem = CategoryItems(
+            title= request.form['itemName'], 
+            description = request.form['description'],
+            categoryId = request.form['category'] )
+        session.add(editedItem)
+        session.commit()
+        flash("New menu item have added successfully!")
+        return redirect(url_for('showItems', categoryName = category.name ))
+    else:
+        itemToEdit = session.query(CategoryItems).filter_by(categoryId = category.id, \
+        title = itemName).first()
+        categories = session.query(Categories).all()
+        return render_template('editCategoryItem.html', category= category, \
+        categories = categories, item = itemToEdit )
 
 
 @app.route('/catalog/json')

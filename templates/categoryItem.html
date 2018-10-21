@@ -26,23 +26,20 @@
     </div>
 
     <div class="container-fluid container-custom">
-        <div class="row">
+        <div class="row"> 
             {% include "sidebar.html" %}
             <main class="col bg-faded py-3">
                 <div class="col p-3">
-                    {% for items in categoryItems %}
-                    <h3> <a href="{{items.title}}"> {{items.title}} </a> </h3>
-                    <!-- <p>{{items.description}}</p> -->
-                    {% endfor %}
-                    {% if 'username' in session %}
-                    <span>Press to add new item: 
-                            <a href="{{url_for('addNewCategroyItem', categoryName = category.name )}}">
-                                Here
-                            </a>
-                    </span> </br>
-                    
-                    {% endif %}
+                   <h2>{{item.title}}</h2> </br>
 
+                   <p>
+                       {{item.description}}
+                   </p>
+                   <span>Press to edit this item: 
+                        <a href="{{url_for('editCategoryItem', categoryName = itemCategory.name , itemName = item.title  )}}">
+                            Here
+                        </a>
+                </span> </br>
                 </div>
             </main>
         </div>
