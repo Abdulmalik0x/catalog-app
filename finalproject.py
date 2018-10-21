@@ -292,12 +292,9 @@ def getUserId(email):
 def catalogIndex():
     if 'username' not in login_session:
         return redirect('/login')
-    # newCategory = Categories(name = "TestCategory")
-    # session.add(newCategory)
-    # session.commit()
     categories = session.query(Categories).all()
     categoriesItems = session.query(CategoryItems).all()
-    print (categoriesItems)
+    print("Leangth of category items : %s" % len(categoriesItems))
     return render_template('main.html', categories= categories , \
     categoriesItems = categoriesItems)
 
@@ -306,21 +303,19 @@ def catalogIndex():
 def showItems(categoryName):
     category = session.query(Categories).filter_by(name=categoryName).first()
     categoryItems = session.query(CategoryItems).filter_by(categoryId=category.id)
+    categories = session.query(Categories).all()
     return render_template('categoryItems.html', category = category, \
-    categoryItems=categoryItems)
+    categoryItems=categoryItems, categories = categories)
+
 
 @app.route('/catalog/<categoryName>/<itemName>/')
 def showItem(categoryName, itemName):
-    print(itemName)
     if 'username' not in login_session:
         return redirect('/login')
     category = session.query(Categories).filter_by(name=categoryName).first()
     CategoryItem = session.query(CategoryItems).filter_by(title =itemName , \
     categoryId = category.id).first()
-    print(CategoryItem)
     return render_template('categoryItem.html', itemCategory = category, item = CategoryItem)
-
-    
 
 
 @app.route('/catalog/addNewCategory/', methods=['GET', 'POST'])
@@ -337,22 +332,23 @@ def addCategory():
         except:
             abort(404)
 
+
 @app.route('/catalog/<categoryName>/newItem', methods=['GET', 'POST'])
 def addNewCategroyItem(categoryName):
     print(login_session)
     if 'username' not in login_session:
         return redirect('/login')
+    print(request.method)
     category = session.query(Categories).filter_by(name=categoryName).first()
     if request.method == 'POST':
         category = session.query(Categories).filter_by(name = categoryName).first()
         newItem = CategoryItems(
-            title= request.form['itemName'], categoryId = category.id )
+            title = request.form['itemName'], categoryId = category.id )
         session.add(newItem)
         session.commit()
         flash("New menu item have added successfully!")
         return redirect(url_for('showItems', categoryName = category.name ))
     else:
-
         return render_template('addNewCategroyItem.html', category= category)
 
 
@@ -360,23 +356,38 @@ def addNewCategroyItem(categoryName):
 def editCategoryItem(categoryName, itemName):
     if 'username' not in login_session:
         return redirect('/login')
-    categories = session.query(Categories).all()
     category = session.query(Categories).filter_by(name = categoryName).first()
+    categories = session.query(Categories).all()
+    print(request.method)
     if request.method == 'POST':
-        # this may add without deleting
-        editedItem = CategoryItems(
-            title= request.form['itemName'], 
-            description = request.form['description'],
-            categoryId = request.form['category'] )
-        session.add(editedItem)
+        print("Reach 2")
+        
+        selectedCategory = request.form.get('category-selected')
+        newCategory = session.query(Categories).filter_by(name = selectedCategory).first()
+
+        session.query(CategoryItems).\
+            filter_by(title = itemName, \
+            categoryId = category.id ).\
+            update({"title": request.form['itemName'], \
+            "description": request.form['description'], \
+            "categoryId": newCategory.id })
+        
         session.commit()
-        flash("New menu item have added successfully!")
-        return redirect(url_for('showItems', categoryName = category.name ))
+
+        # Update query doesn't delete the itme id if moved, query below to delete it
+        if newCategory.id != category.id:
+            session.query(CategoryItems).filter_by(categoryId = category.id, \
+            title = itemName).delete()    
+        print ("new category name :" + newCategory.name)
+        flash("Item has bean edited succefully!")
+        return redirect(url_for('showItems', categoryName = selectedCategory ))
     else:
+        print("Reach 3")
         itemToEdit = session.query(CategoryItems).filter_by(categoryId = category.id, \
         title = itemName).first()
+        category = session.query(Categories).filter_by(name = categoryName).first()
         categories = session.query(Categories).all()
-        return render_template('editCategoryItem.html', category= category, \
+        return render_template('editCategoryItem.html', category = category, \
         categories = categories, item = itemToEdit )
 
 
