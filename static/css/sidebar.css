@@ -1,0 +1,79 @@
+:root {
+    /* set the sidebar width */
+    --sidebar-width: 20vw;
+}
+
+html {
+    height: 100%;
+  }
+
+body {
+    font-family: sans-serif;
+    width: 100%;
+    height: 100%;
+    margin: auto;
+}
+
+html, body, {
+    position:fixed;
+    top:0;
+    bottom:0;
+    left:0;
+    right:0;
+}
+
+.w-sidebar {
+    width: var(--sidebar-width);
+    max-width: var(--sidebar-width);
+    top: 0;
+    z-index: 1060;
+}
+
+.row.collapse{
+    margin-left: calc(-1 * var(--sidebar-width));
+    left: 0;
+	transition: margin-left .15s linear;
+}  
+
+.high-line {
+    background-color: silver;
+}
+
+.row.collapse.show {
+    margin-left: 0 !important;
+}
+
+.row.collapsing {
+    margin-left: calc(-1 * var(--sidebar-width));
+    left: -0.05%;
+	transition: all .15s linear;
+}
+
+.align {
+    line-height: 0.5;
+}
+
+.high-line-custom {
+    font: 30px bold ;
+    text-align: center;
+    padding: 5;
+    
+}
+
+.line-for-title {
+    border-bottom: 1px  solid black;
+    padding-bottom: 5;
+}
+
+.category-beside-title {
+    font-style: italic !important;
+    color: rgb(161, 150, 150);
+}
+ 
+.nav-bar-custom {
+    color: white !important;
+    text-align: center;
+    margin: auto;
+
+}
+

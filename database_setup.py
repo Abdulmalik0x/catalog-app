@@ -2,9 +2,13 @@ from sqlalchemy import Column, ForeignKey, Integer, String
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship
 from sqlalchemy import create_engine
+import os
 
+os.chdir("D:/Documents/GitHub/Item Catalog App/")
+
+engine = create_engine('sqlite:///itemscategory.db',
+                       connect_args={'check_same_thread': False})
 Base = declarative_base()
-
 
 class User(Base):
     __tablename__ = 'user'
@@ -25,13 +29,11 @@ class User(Base):
         }
 
 
-class Restaurant(Base):
-    __tablename__ = 'restaurant'
+class Categories(Base):
+    __tablename__ = 'categories'
 
     id = Column(Integer, primary_key=True)
-    name = Column(String(250), nullable=False)
-    user_id = Column(Integer, ForeignKey('user.id'))
-    user = relationship(User)
+    name = Column(String(250), nullable=False, unique = True)
 
     @property
     def serialize(self):
@@ -42,32 +44,26 @@ class Restaurant(Base):
         }
 
 
-class MenuItem(Base):
-    __tablename__ = 'menu_item'
+class CategoryItems(Base):
+    __tablename__ = 'category_Items'
 
-    name = Column(String(80), nullable=False)
     id = Column(Integer, primary_key=True)
+    title = Column(String(80), nullable=False)
     description = Column(String(250))
-    price = Column(String(8))
-    course = Column(String(250))
-    restaurant_id = Column(Integer, ForeignKey('restaurant.id'))
-    restaurant = relationship(Restaurant)
-    user_id = Column(Integer, ForeignKey('user.id'))
-    user = relationship(User)
+    categoryId = Column(Integer, ForeignKey('categories.id'))
+    categories = relationship(Categories)
 
     @property
     def serialize(self):
         """Return object data in easily serializeable format"""
         return {
-            'name': self.name,
-            'description': self.description,
             'id': self.id,
-            'price': self.price,
-            'course': self.course,
+            'title': self.name,
+            'description': self.description,
+            'categoryId': self.categoryId,
+            'categoryName': self.categoryName
         }
 
-
-engine = create_engine('sqlite:///restaurantmenuwithusers.db')
 
 """ Instead of creating a schema automatically from the SQLAlchemy, as what's shown in the previous articles using Base.metadata.create_all(engine) """
 Base.metadata.create_all(engine)

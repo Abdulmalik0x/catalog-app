@@ -7,11 +7,9 @@
 
             {% include "header.html" %}
 
-        <form action="{{url_for('addRestaurant')}}" method="POST">
-            
-
-                    <p>Enter the new restaurant name : </p></br> 
-                    <input type="text" name="restaurantname" placeholder="your restaurant name">
+        <form action="{{url_for('addCategory')}}" method="POST">
+                    <p>Add new category :</p></br> 
+                    <input type="text" name="category-name" placeholder="your category name">
                     <input type="submit" value="Submit">
         
                 </form>

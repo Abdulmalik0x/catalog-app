@@ -1,0 +1,54 @@
+<html>
+
+<head>
+    <link rel="stylesheet" type="text/css" href="{{url_for('static', filename='css/main.css')}}">
+    <link rel="stylesheet" type="text/css" href="{{url_for('static', filename='css/sidebar.css')}}">
+    <link href="//maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css" rel="stylesheet" id="bootstrap-css">
+    <script src="//cdnjs.cloudflare.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script>
+    <!------ Include the above in your HEAD tag ---------->
+    <title> Catalog </title>
+</head>
+
+<body>
+
+    <div class="flash-msg">
+        {% include "header.html" %}
+
+        {% with messages = get_flashed_messages() %}
+        {% if messages %}
+
+        {% for message in messages %}
+        <li>{{ message }}</li>
+        {% endfor %}
+
+        {% endif %}
+        {% endwith %}
+    </div>
+
+    <div class="container-fluid container-custom">
+        <div class="row">
+            {% include "sidebar.html" %}
+            <main class="col bg-faded py-3">
+                <div class="col p-3">
+                    {% for items in categoryItems %}
+                    <h3> <a href="#"> {{items.title}} </a> </h3>
+                    <!-- <p>{{items.description}}</p> -->
+                    {% endfor %}
+                    {% if 'username' in session %}
+                    <span>Press to add new item: 
+                            <a href="{{url_for('addNewCategroyItem', categoryName = category.name )}}">
+                                Here
+                            </a>
+                    </span> </br>
+                   
+                    {% endif %}
+
+                </div>
+            </main>
+        </div>
+    </div>
+
+</body>
+
+
+</html>

@@ -3,8 +3,9 @@ from http.server import BaseHTTPRequestHandler, HTTPServer
 import cgi
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
-from database_setup import Base, Restaurant, MenuItem, User
-from flask import render_template, url_for, request, redirect, flash, jsonify
+from database_setup import Categories, Base, CategoryItems, User
+from flask import render_template, url_for, request, redirect, flash, jsonify, \
+abort
 from flask import session as login_session
 import random
 import string
@@ -17,13 +18,12 @@ from flask import make_response
 import requests
 import os
 
-from elasticsearch import Elasticsearch
 
 app = Flask(__name__)
 
 # Connect to db and create db session
 # this because sqlite require new thread for each transaction with DB
-engine = create_engine('sqlite:///restaurantmenuwithusers.db',
+engine = create_engine('sqlite:///itemscategory.db',
                        connect_args={'check_same_thread': False})
 """ MetaData object contains all of the schema constructs we’ve associated with it """
 Base.metadata.bind = engine
@@ -45,7 +45,7 @@ def loginOauth():
     login_session['state'] = state
     return render_template('login.html', STATE=state)
 
-
+# Facebook login oauth api
 @app.route('/fbconnect', methods=['POST'])
 def fbconnect():
     if request.args.get('state') != login_session['state']:
@@ -131,6 +131,7 @@ def fbconnect():
     return output
 
 
+# Google oauth login API
 @app.route('/gconnect', methods=['POST'])
 def gconnect():
     # Validate state token, compare logged session with request session
@@ -208,8 +209,8 @@ def gconnect():
     email = login_session['email']
     try:
         print("email %s" % email)
-        print("Query : %s" % session.query(
-            User).filter_by(email=email).first())
+        # print("Query : %s" % session.query(
+            # User).filter_by(email=email).first())
         if session.query(User).filter_by(email=login_session['email']).one() is None:
             print("Not found")
         print("User already have accoun in database")
@@ -264,8 +265,6 @@ def gdisconnect():
 
 
 def createUser(login_session):
-  #  receivedEmail = login_session['email']
-   # userName = receivedEmail.partition('@')[0]
     print("Here is login name " + login_session['username'])
     newUser = User(name=login_session['username'],
                    email=login_session['email'], picture=login_session['picture'])
@@ -289,114 +288,66 @@ def getUserId(email):
 
 
 @app.route('/')
-@app.route('/restaurant/')
-def showRestaurants():
+@app.route('/catalog/')
+def catalogIndex():
     if 'username' not in login_session:
         return redirect('/login')
-    allRestaurants = session.query(Restaurant).all()
-    print ("Reached here !")
-    return render_template('restaurants.html', allRestaurants=allRestaurants)
+    # newCategory = Categories(name = "TestCategory")
+    # session.add(newCategory)
+    # session.commit()
+    categories = session.query(Categories).all()
+    categoriesItems = session.query(CategoryItems).all()
+    print (categoriesItems)
+    return render_template('main.html', categories= categories , \
+    categoriesItems = categoriesItems)
 
 
-@app.route('/restaurant/<int:restaurant_id>/')
-def showMenu(restaurant_id):
-    restaurant = session.query(Restaurant).filter_by(id=restaurant_id).first()
-    items = session.query(MenuItem).filter_by(restaurant_id=restaurant_id)
-    return render_template('restaurantmenu.html', restaurant=restaurant, items=items)
+@app.route('/catalog/<categoryName>/items')
+def showItems(categoryName):
+    category = session.query(Categories).filter_by(name=categoryName).first()
+    categoryItems = session.query(CategoryItems).filter_by(categoryId=category.id)
+    return render_template('categoryItems.html', category = category, \
+    categoryItems=categoryItems)
 
 
-@app.route('/restaurant/addnewrestaurant/', methods=['GET', 'POST'])
-def addRestaurant():
+@app.route('/catalog/addNewCategory/', methods=['GET', 'POST'])
+def addCategory():
     if request.method == 'GET':
-        return render_template('addnewrestaurant.html')
+        return render_template('addNewCategory.html')
     else:
-        print(request.form['restaurantname'])
-        newRestaurant = Restaurant(
-            name=request.form['restaurantname'], user_id=login_session['user_id'])
-        session.add(newRestaurant)
-        session.commit()
-        return redirect(url_for('showRestaurants'))
+        try:
+            newCategroy = Categories(name = request.form['category-name'])
+            session.add(newCategroy)
+            session.commit()
+            flash("New category has bean added !")
+            return redirect(url_for('catalogIndex'))
+        except:
+            abort(404)
 
-
-@app.route('/restaurant/<int:restaurant_id>/newmenu', methods=['GET', 'POST'])
-def newMenuItem(restaurant_id):
+@app.route('/catalog/<categoryName>/newItem', methods=['GET', 'POST'])
+def addNewCategroyItem(categoryName):
     print(login_session)
     if 'username' not in login_session:
         return redirect('/login')
+    category = session.query(Categories).filter_by(name=categoryName).first()
     if request.method == 'POST':
-        newMenu = MenuItem(
-            name=request.form['name'], restaurant_id=restaurant_id)
-        session.add(newMenu)
+        category = session.query(Categories).filter_by(name = categoryName).first()
+        newItem = CategoryItems(
+            title= request.form['itemName'], categoryId = category.id )
+        session.add(newItem)
         session.commit()
         flash("New menu item have added successfully!")
-        return redirect(url_for('Menu', restaurant_id=restaurant_id))
+        return redirect(url_for('showItems', categoryName = category.name ))
     else:
-        return render_template('newmenuitem.html', restaurant_id=restaurant_id)
+
+        return render_template('addNewCategroyItem.html', category= category)
 
 
-@app.route('/restaurant/<int:restaurant_id>/<int:menu_id>/edit', methods=['GET', 'POST'])
-def editMenuItem(restaurant_id, menu_id):
-    editedItem = session.query(MenuItem).filter_by(
-        id=menu_id, restaurant_id=restaurant_id,).one()
-    if request.method == 'POST':
-
-       # editedItem = MenuItem(name = request.form['newname'], restaurant_id = restaurant_id, id = menu_id)
-        if request.form['newname']:
-            editedItem.name = request.form['newname']
-        session.add(editedItem)
-      #  session.add(item)
-        session.commit()
-        flash("Menu item have edited successfully!")
-
-        return redirect(url_for('showMenu', restaurant_id=restaurant_id))
-
-    else:
-     #   item = session.query(MenuItem).filter_by(restaurant_id = restaurant_id, id = menu_id).one()
-        editedItem = session.query(MenuItem).filter_by(id=menu_id).one()
-        return render_template('editmenuitem.html', restaurant_id=restaurant_id, menu_id=menu_id, item=editedItem)
-
-# Task 3: Create a route for deleteMenuItem function here
-
-
-@app.route('/restaurant/<int:restaurant_id>/<int:menu_id>/delete', methods=['GET', 'POST'])
-def deleteMenuItem(restaurant_id, menu_id):
-    deleteitem = session.query(MenuItem).filter_by(
-        id=menu_id, restaurant_id=restaurant_id,).one()
-    if request.method == 'POST':
-        session.delete(deleteitem)
-        session.commit()
-        redirect(url_for('Menu', restaurant_id=restaurant_id))
-    else:
-        return render_template('deletemenuitem.html', restaurant_id=restaurant_id, menu_id=menu_id, item=deleteitem)
-
-# Making API endpoint (GET Request)
-
-
-@app.route('/restaurant/<int:restaurant_id>/menu/json')
-def MenuItemJSON(restaurant_id):
+@app.route('/catalog/json')
+def catalogAPI():
   #  restaurant = session.query(Restaurant).filter_by(id = restaurant_id).one()
-    items = session.query(MenuItem).all()
-    return jsonify([i.MenuItemJSON for i in items])
-
-
-@app.route('/restaurant/json')
-def RestaurantsJSON():
-  #  restaurant = session.query(Restaurant).filter_by(id = restaurant_id).one()
-    Restaurants = session.query(Restaurant).all()
-    return jsonify(Resturants=[i.RestaurantsJSON for i in Restaurants])
-
-
-@app.route('/restaurant/search/', methods=['POST'])
-def SearchRestaurant():
-    if request.method == 'POST':
-        searchWord = request.form['wordToSearch']
-        restaurantToSearch = session.query(Restaurant).filter(Restaurant.name.ilike('%' + searchWord + '%')).all()
-        """ The below functions is to implement the search using raw sql query, but now working yet """
-      #  result11 = session.execute("SELECT * from Restaurant where name like '%' || :param || '%';", {'param': searchWord}) Fetch result but doesn't display
-        #result2 = session.execute("SELECT Restaurant.id from Restaurant where Restaurant.name=%s;", (searchWord,))
-        return render_template('restaurants.html', allRestaurants=restaurantToSearch)
-    else : 
-        return redirect('/Restaurant')
+    categories = session.query(Categories).all()
+    return jsonify(Categories=[i.serialize for i in categories])
 
 
 if __name__ == '__main__':

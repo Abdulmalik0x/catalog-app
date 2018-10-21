@@ -1,36 +1,35 @@
-<div class="row top-menu">
-	<div class="col-md-6 text-right">
-		<div class="heading-title">
-			<h1> Restaurants website </h1>
-		</div>
-		<header class="header">
-		{%if 'username' not in session %}
+<header class="header">
+
+	<div class="high-line-custom line-for-title">
+		<h1 class="line-for-title"> Catalog App </h1>
+	</div>
+
+	<div class="header-nav-">
+
+		{% if 'username' not in session %}
 		<a href="{{url_for('loginOauth')}}">Click Here to Login </a>
 		{% else %}
+
 		<nav class="navbar">
-			<ul>
-				<li>
-					<a href="{{url_for('showRestaurants')}}">
-						<span class="glyphicon glyphicon-home" aria-hidden="true"></span>All Restaurants
+			<ul class="nav-bar-custom">
+				<li class="nav-bar-custom">
+					<a class="" href="{{url_for('catalogIndex')}}">
+						<span class="glyphicon glyphicon-home" aria-hidden="true"></span>Main page
 					</a>
 				</li>
-				<li>
-					<a href="{{url_for('addRestaurant')}}"> Add new restaurant </a>
+				<li class="nav-bar-custom">
+					<a href="{{url_for('addCategory')}}"> Add new category </a>
 				</li>
-				<li>
+				<li class="nav-bar-custom">
 
-					<a href="{{url_for('loginOauth')}}">Logout </a>
+					<a href="{{url_for('gdisconnect')}}">Logout </a>
 				</li>
 			</ul>
 			<ul>
-				<form action="{{url_for('SearchRestaurant')}}" method="POST">
-					<input type="text" name="wordToSearch">
-					<input type="submit" value="Search">
-				</form>
+
 			</ul>
 		</nav>
-	</header>
 		{% endif %}
 
 	</div>
-</div>
+</header>
