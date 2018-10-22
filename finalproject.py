@@ -398,7 +398,8 @@ def deleteItem(categoryName, itemName):
         session.query(CategoryItems).filter_by(categoryId = category.id, \
         title = itemName).delete()
     else:
-        render_template('')
+        render_template('deleteItem.html', categoryName = categoryName, \
+        itemName = itemName)
 
 
 @app.route('/catalog/json')
