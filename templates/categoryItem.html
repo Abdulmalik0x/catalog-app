@@ -13,33 +13,30 @@
 
     <div class="flash-msg">
         {% include "header.html" %}
-
-        {% with messages = get_flashed_messages() %}
-        {% if messages %}
-
-        {% for message in messages %}
-        <li>{{ message }}</li>
-        {% endfor %}
-
-        {% endif %}
-        {% endwith %}
     </div>
 
     <div class="container-fluid container-custom">
-        <div class="row"> 
+        <div class="row">
             {% include "sidebar.html" %}
             <main class="col bg-faded py-3">
                 <div class="col p-3">
-                   <h2>{{item.title}}</h2> </br>
+                    <h2>{{item.title}}</h2> </br>
 
-                   <p>
-                       {{item.description}}
-                   </p>
-                   <span>Press to edit this item: 
+                    <p>
+                        {{item.description}}
+                    </p>
+                    {% if 'username' in session %}
+                    <span>Press to edit this item:
                         <a href="{{url_for('editCategoryItem', categoryName = itemCategory.name , itemName = item.title  )}}">
-                            Here
+                            Edit
                         </a>
-                </span> </br>
+                    </span> </br>
+                    <span>Press to edit this item:
+                        <a href="{{url_for('deleteItem', categoryName = itemCategory.name , itemName = item.title  )}}">
+                            Delete
+                        </a>
+                    </span>
+                    {% endif %}
                 </div>
             </main>
         </div>

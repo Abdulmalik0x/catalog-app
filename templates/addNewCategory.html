@@ -1,17 +1,40 @@
 <html>
-    <head>
-            <link rel="stylesheet" type="text/css" href="{{url_for('static', filename='css/main.css')}}">
-            <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        </head>
-    <body>
 
-            {% include "header.html" %}
+<head>
+    <link rel="stylesheet" type="text/css" href="{{url_for('static', filename='css/main.css')}}">
+    <link rel="stylesheet" type="text/css" href="{{url_for('static', filename='css/sidebar.css')}}">
+    <link href="//maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css" rel="stylesheet" id="bootstrap-css">
+    <script src="//cdnjs.cloudflare.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script>
+    <!------ Include the above in your HEAD tag ---------->
+    <title> Catalog </title>
+</head>
 
-        <form action="{{url_for('addCategory')}}" method="POST">
-                    <p>Add new category :</p></br> 
-                    <input type="text" name="category-name" placeholder="your category name">
-                    <input type="submit" value="Submit">
-        
-                </form>
-    </body>
+<body>
+    <div class="flash-msg">
+        {% include "header.html" %}
+    </div>
+
+    <div class="container-fluid container-custom">
+        <div class="row">
+            {% include "sidebar.html" %}
+
+
+            <main class="col bg-faded py-3">
+                <div class="col p-3">
+
+                    <form action="{{url_for('addCategory')}}" method="POST">
+                        <p>Add new category :</p></br>
+                        <input type="text" name="category-name" placeholder="your category name">
+                        <input type="submit" value="Submit">
+
+                    </form>
+
+                </div>
+            </main>
+
+        </div>
+    </div>
+    </div>
+</body>
+
 </html>
