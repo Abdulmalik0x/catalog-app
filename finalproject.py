@@ -391,9 +391,14 @@ def editCategoryItem(categoryName, itemName):
         categories = categories, item = itemToEdit )
 
 
-@app.route('/catalog/<categoryName>/<itemName>/delete')
+@app.route('/catalog/<categoryName>/<itemName>/delete', methods=['GET','POST'])
 def deleteItem(categoryName, itemName):
-    
+    category = session.query(Categories).filter_by(name = categoryName).first()
+    if request.method == 'POST':
+        session.query(CategoryItems).filter_by(categoryId = category.id, \
+        title = itemName).delete()
+    else:
+        render_template('')
 
 
 @app.route('/catalog/json')
