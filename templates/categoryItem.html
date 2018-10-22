@@ -10,6 +10,7 @@
 </head>
 
 <body>
+
     <div class="flash-msg">
         {% include "header.html" %}
     </div>
@@ -17,24 +18,31 @@
     <div class="container-fluid container-custom">
         <div class="row">
             {% include "sidebar.html" %}
-
-
             <main class="col bg-faded py-3">
                 <div class="col p-3">
+                    <h2>{{item.title}}</h2> </br>
 
-                    <form action="{{url_for('addCategory')}}" method="POST">
-                        <p>Add new category :</p></br>
-                        <input type="text" name="category-name" placeholder="your category name">
-                        <input type="submit" value="Submit">
-
-                    </form>
-
+                    <p>
+                        {{item.description}}
+                    </p>
+                    {% if 'username' in session %}
+                    <span>Press to edit this item:
+                        <a href="{{url_for('editCategoryItem', categoryName = itemCategory.name , itemName = item.title  )}}">
+                            Edit
+                        </a>
+                    </span> </br>
+                    <span>Press to edit this item:
+                        <a href="{{url_for('deleteItem', categoryName = itemCategory.name , itemName = item.title  )}}">
+                            Delete
+                        </a>
+                    </span>
+                    {% endif %}
                 </div>
             </main>
-
         </div>
     </div>
-    </div>
+
 </body>
+
 
 </html>

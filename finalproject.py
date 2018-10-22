@@ -5,10 +5,11 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from database_setup import Categories, Base, CategoryItems, User
 from flask import render_template, url_for, request, redirect, flash, jsonify, \
-abort
+    abort
 from flask import session as login_session
 import random
 import string
+from flask_login import login_required, LoginManager
 
 from oauth2client.client import flow_from_clientsecrets
 from oauth2client.client import FlowExchangeError
@@ -46,6 +47,8 @@ def loginOauth():
     return render_template('login.html', STATE=state)
 
 # Facebook login oauth api
+
+
 @app.route('/fbconnect', methods=['POST'])
 def fbconnect():
     if request.args.get('state') != login_session['state']:
@@ -210,7 +213,7 @@ def gconnect():
     try:
         print("email %s" % email)
         # print("Query : %s" % session.query(
-            # User).filter_by(email=email).first())
+        # User).filter_by(email=email).first())
         if session.query(User).filter_by(email=login_session['email']).one() is None:
             print("Not found")
         print("User already have accoun in database")
@@ -241,14 +244,12 @@ def gdisconnect():
         response.headers['Content-Type'] = 'application/json'
         return response
     print('In gdisconnect access token is %s ' % access_token)
-    print('User name is: ')
-    print(login_session['username'])
+    print('User name is : %s' % login_session['username'])
     url = 'https://accounts.google.com/o/oauth2/revoke?token=%s' % login_session['access_token']
     h = httplib2.Http()
     result = h.request(url, 'GET')[0]
-    print('result is : ')
-    print(result)
-    if result['status'] == '200':
+    print('result is : %s ' % result)
+    if result['status'] == '200': # response is 400 !!
         del login_session['access_token']
         del login_session['gplus_id']
         del login_session['username']
@@ -289,34 +290,47 @@ def getUserId(email):
 
 @app.route('/')
 @app.route('/catalog/')
+# @login_required
 def catalogIndex():
     if 'username' not in login_session:
         return redirect('/login')
-    # newCategory = Categories(name = "TestCategory")
-    # session.add(newCategory)
-    # session.commit()
     categories = session.query(Categories).all()
     categoriesItems = session.query(CategoryItems).all()
-    print (categoriesItems)
-    return render_template('main.html', categories= categories , \
-    categoriesItems = categoriesItems)
+    print("Leangth of category items : %s" % len(categoriesItems))
+    return render_template('main.html', categories=categories,
+                           categoriesItems=categoriesItems)
 
 
 @app.route('/catalog/<categoryName>/items')
 def showItems(categoryName):
     category = session.query(Categories).filter_by(name=categoryName).first()
-    categoryItems = session.query(CategoryItems).filter_by(categoryId=category.id)
-    return render_template('categoryItems.html', category = category, \
-    categoryItems=categoryItems)
+    categoryItems = session.query(
+        CategoryItems).filter_by(categoryId=category.id)
+    categories = session.query(Categories).all()
+    return render_template('categoryItems.html', category=category,
+                           categoryItems=categoryItems, categories=categories)
+
+
+@app.route('/catalog/<categoryName>/<itemName>/')
+def showItem(categoryName, itemName):
+    if 'username' not in login_session:
+        return redirect('/login')
+    print(login_session['username'])
+    categories = session.query(Categories).all()
+    category = session.query(Categories).filter_by(name=categoryName).first()
+    CategoryItem = session.query(CategoryItems).filter_by(title=itemName,
+                                                          categoryId=category.id).first()
+    return render_template('categoryItem.html', itemCategory=category, item=CategoryItem, categories = categories)
 
 
 @app.route('/catalog/addNewCategory/', methods=['GET', 'POST'])
 def addCategory():
     if request.method == 'GET':
-        return render_template('addNewCategory.html')
+        categories = session.query(Categories).all()
+        return render_template('addNewCategory.html', categories=categories)
     else:
         try:
-            newCategroy = Categories(name = request.form['category-name'])
+            newCategroy = Categories(name=request.form['category-name'])
             session.add(newCategroy)
             session.commit()
             flash("New category has bean added !")
@@ -324,25 +338,85 @@ def addCategory():
         except:
             abort(404)
 
+
 @app.route('/catalog/<categoryName>/newItem', methods=['GET', 'POST'])
 def addNewCategroyItem(categoryName):
     print(login_session)
     if 'username' not in login_session:
         return redirect('/login')
+    print(request.method)
     category = session.query(Categories).filter_by(name=categoryName).first()
     if request.method == 'POST':
-        category = session.query(Categories).filter_by(name = categoryName).first()
+        category = session.query(Categories).filter_by(
+            name=categoryName).first()
         newItem = CategoryItems(
-            title= request.form['itemName'], categoryId = category.id )
+            title=request.form['itemName'], categoryId=category.id)
         session.add(newItem)
         session.commit()
         flash("New menu item have added successfully!")
-        return redirect(url_for('showItems', categoryName = category.name ))
+        return redirect(url_for('showItems', categoryName=category.name))
     else:
+        categories = session.query(Categories).all()
+        return render_template('addNewCategroyItem.html', category = category,categories=categories)
 
-        return render_template('addNewCategroyItem.html', category= category)
+
+@app.route('/catalog/<categoryName>/<itemName>/editItem', methods=['GET', 'POST'])
+def editCategoryItem(categoryName, itemName):
+    if 'username' not in login_session:
+        return redirect('/login')
+    category = session.query(Categories).filter_by(name=categoryName).first()
+    categories = session.query(Categories).all()
+    print(request.method)
+    if request.method == 'POST':
+        print("Reach 2")
+
+        selectedCategory = request.form.get('category-selected')
+        newCategory = session.query(Categories).filter_by(
+            name=selectedCategory).first()
+
+        session.query(CategoryItems).\
+            filter_by(title=itemName,
+                      categoryId=category.id).\
+            update({"title": request.form['itemName'],
+                    "description": request.form['description'],
+                    "categoryId": newCategory.id})
+
+        session.commit()
+
+        # Update query doesn't delete the itme id if moved, query below to delete it
+        if newCategory.id != category.id:
+            session.query(CategoryItems).filter_by(categoryId=category.id,
+                                                   title=itemName).delete()
+        print("new category name :" + newCategory.name)
+        flash("Item has bean edited succefully!")
+        return redirect(url_for('showItems', categoryName=selectedCategory))
+    else:
+        print("Reach 3")
+        itemToEdit = session.query(CategoryItems).filter_by(categoryId=category.id,
+                                                            title=itemName).first()
+        category = session.query(Categories).filter_by(
+            name=categoryName).first()
+        categories = session.query(Categories).all()
+        return render_template('editCategoryItem.html', category=category,
+                               categories=categories, item=itemToEdit)
 
 
+@app.route('/catalog/<categoryName>/<itemName>/delete', methods=['GET', 'POST'])
+def deleteItem(categoryName, itemName):
+    category = session.query(Categories).filter_by(name=categoryName).first()
+    if request.method == 'POST':
+        print("POST")
+        session.query(CategoryItems).filter_by(categoryId=category.id,
+                                               title=itemName).delete()
+        flash("Item has been deleted!")
+        session.commit()
+        return redirect(url_for('showItems', categoryName=categoryName))
+    else:
+        print(categoryName + " " + itemName)
+        return render_template('deleteItem.html', categoryName=categoryName,
+                               itemName=itemName)
+
+# API for all app categories info.
 @app.route('/catalog/json')
 def catalogAPI():
   #  restaurant = session.query(Restaurant).filter_by(id = restaurant_id).one()
@@ -354,4 +428,8 @@ if __name__ == '__main__':
     # each session require secret key, to access the methods inside it like flash
     app.secret_key = 'super_secret_key'
     app.debug = True  # Auto reload for server if change occurs
-    app.run(host='0.0.0.0', port=5050)
+    # login_manager = LoginManager()
+    # login_manager.init_app(app)
+    # login_manager.login_view = 'loginOauth'
+
+app.run(host='0.0.0.0', port=5050)

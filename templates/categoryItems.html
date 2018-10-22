@@ -31,16 +31,17 @@
             <main class="col bg-faded py-3">
                 <div class="col p-3">
                     {% for items in categoryItems %}
-                    <h3> <a href="#"> {{items.title}} </a> </h3>
+                    <h3> <a href="{{items.title}}"> {{items.title}} </a> </h3>
                     <!-- <p>{{items.description}}</p> -->
                     {% endfor %}
                     {% if 'username' in session %}
                     <span>Press to add new item: 
                             <a href="{{url_for('addNewCategroyItem', categoryName = category.name )}}">
-                                Here
+                                New item
                             </a>
                     </span> </br>
-                   
+                    
+                    
                     {% endif %}
 
                 </div>
