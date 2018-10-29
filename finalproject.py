@@ -4,13 +4,17 @@ import cgi
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from database_setup import Categories, Base, CategoryItems, User
-from flask import render_template, url_for, request, redirect, flash, jsonify, \
-    abort
+from flask import (render_template,
+                    url_for, request,
+                    redirect,
+                    flash,
+                    jsonify,
+                    abort)
 from flask import session as login_session
 import random
 import string
-from flask_login import login_required, LoginManager
-
+from flask_login import LoginManager
+from functools import wraps
 from oauth2client.client import flow_from_clientsecrets
 from oauth2client.client import FlowExchangeError
 import httplib2
@@ -28,7 +32,6 @@ engine = create_engine('sqlite:///itemscategory.db',
                        connect_args={'check_same_thread': False})
 """ MetaData object contains all of the schema constructs we’ve associated with it """
 Base.metadata.bind = engine
-
 DBSession = sessionmaker(bind=engine)
 session = DBSession()
 
@@ -288,12 +291,22 @@ def getUserId(email):
         return None
 
 
+def login_required(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if 'username' in login_session:
+            return f(*args, **kwargs)
+        else:
+            flash("You are not allowed to access there")
+            return redirect('/login')
+    return decorated_function
+
+
+
 @app.route('/')
 @app.route('/catalog/')
-# @login_required
+@login_required
 def catalogIndex():
-    if 'username' not in login_session:
-        return redirect('/login')
     categories = session.query(Categories).all()
     categoriesItems = session.query(CategoryItems).all()
     print("Leangth of category items : %s" % len(categoriesItems))
@@ -312,9 +325,8 @@ def showItems(categoryName):
 
 
 @app.route('/catalog/<categoryName>/<itemName>/')
+@login_required
 def showItem(categoryName, itemName):
-    if 'username' not in login_session:
-        return redirect('/login')
     print(login_session['username'])
     categories = session.query(Categories).all()
     category = session.query(Categories).filter_by(name=categoryName).first()
@@ -324,6 +336,7 @@ def showItem(categoryName, itemName):
 
 
 @app.route('/catalog/addNewCategory/', methods=['GET', 'POST'])
+@login_required
 def addCategory():
     if request.method == 'GET':
         categories = session.query(Categories).all()
@@ -340,10 +353,9 @@ def addCategory():
 
 
 @app.route('/catalog/<categoryName>/newItem', methods=['GET', 'POST'])
+@login_required
 def addNewCategroyItem(categoryName):
     print(login_session)
-    if 'username' not in login_session:
-        return redirect('/login')
     print(request.method)
     category = session.query(Categories).filter_by(name=categoryName).first()
     if request.method == 'POST':
@@ -361,9 +373,8 @@ def addNewCategroyItem(categoryName):
 
 
 @app.route('/catalog/<categoryName>/<itemName>/editItem', methods=['GET', 'POST'])
+@login_required
 def editCategoryItem(categoryName, itemName):
-    if 'username' not in login_session:
-        return redirect('/login')
     category = session.query(Categories).filter_by(name=categoryName).first()
     categories = session.query(Categories).all()
     print(request.method)
