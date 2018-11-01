@@ -3,6 +3,8 @@ from http.server import BaseHTTPRequestHandler, HTTPServer
 import cgi
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
+# from sqlalchemy_dao import Dao, POOL_DEFAULT, POOL_DISABLED
+# from sqlalchemy.pool import SingletonThreadPool
 from database_setup import Categories, Base, CategoryItems, User
 from flask import (render_template,
                     url_for, request,
@@ -25,12 +27,12 @@ import os
 
 
 app = Flask(__name__)
-
 # Connect to db and create db session
 # this because sqlite require new thread for each transaction with DB
+
 engine = create_engine('sqlite:///itemscategory.db',
                        connect_args={'check_same_thread': False})
-""" MetaData object contains all of the schema constructs we’ve associated with it """
+# """ MetaData object contains all of the schema constructs we’ve associated with it """
 Base.metadata.bind = engine
 DBSession = sessionmaker(bind=engine)
 session = DBSession()
@@ -47,7 +49,7 @@ def loginOauth():
     state = ''.join(random.choice(string.ascii_uppercase + string.digits)
                     for x in range(32))
     login_session['state'] = state
-    return render_template('login.html', STATE=state)
+    return render_template('login.html', STATE=state, CLIENT_ID = CLIENT_ID)
 
 # Facebook login oauth api
 
@@ -121,7 +123,7 @@ def fbconnect():
         user_id = createUser(login_session)
         print("User created")
 
-    login_session['user_id'] = user_id
+    login_session['user_id'] = user_id.id
     print("login_session info after sign in : %s " % login_session)
 
     output = ''
@@ -217,9 +219,13 @@ def gconnect():
         print("email %s" % email)
         # print("Query : %s" % session.query(
         # User).filter_by(email=email).first())
-        if session.query(User).filter_by(email=login_session['email']).one() is None:
-            print("Not found")
-        print("User already have accoun in database")
+        try: 
+            user = session.query(User).filter_by(email=login_session['email']).one()
+            if user is not None:
+                login_session['user_id'] = user.id
+                print("User already have accoun in database")
+        except:
+            pass
     except:
         print("Error Happened")
         createUser(login_session)
@@ -274,6 +280,7 @@ def createUser(login_session):
                    email=login_session['email'], picture=login_session['picture'])
     session.add(newUser)
     session.commit()
+    
     user = session.query(User).filter_by(email=login_session['email']).one()
     return user
 
@@ -296,6 +303,7 @@ def login_required(f):
     def decorated_function(*args, **kwargs):
         if 'username' in login_session:
             return f(*args, **kwargs)
+            flash("Welcome again")
         else:
             flash("You are not allowed to access there")
             return redirect('/login')
@@ -316,11 +324,11 @@ def catalogIndex():
 
 @app.route('/catalog/<categoryName>/items')
 def showItems(categoryName):
-    category = session.query(Categories).filter_by(name=categoryName).first()
-    categoryItems = session.query(
+        category = session.query(Categories).filter_by(name=categoryName).first()
+        categoryItems = session.query(
         CategoryItems).filter_by(categoryId=category.id)
-    categories = session.query(Categories).all()
-    return render_template('categoryItems.html', category=category,
+        categories = session.query(Categories).all()
+        return render_template('categoryItems.html', category=category,
                            categoryItems=categoryItems, categories=categories)
 
 
@@ -331,7 +339,7 @@ def showItem(categoryName, itemName):
     categories = session.query(Categories).all()
     category = session.query(Categories).filter_by(name=categoryName).first()
     CategoryItem = session.query(CategoryItems).filter_by(title=itemName,
-                                                          categoryId=category.id).first()
+                                                      categoryId=category.id).first()
     return render_template('categoryItem.html', itemCategory=category, item=CategoryItem, categories = categories)
 
 
@@ -355,16 +363,29 @@ def addCategory():
 @app.route('/catalog/<categoryName>/newItem', methods=['GET', 'POST'])
 @login_required
 def addNewCategroyItem(categoryName):
-    print(login_session)
+    print("login_session : %s" %login_session)
     print(request.method)
     category = session.query(Categories).filter_by(name=categoryName).first()
     if request.method == 'POST':
         category = session.query(Categories).filter_by(
-            name=categoryName).first()
+        name=categoryName).first()
+        # more filter to add for handling multiple values with same name
+        print("login_session : %s" %login_session['email'])
+        try:
+            user_file = session.query(User).filter_by(id = login_session['user_id']).first()
+        except:
+            print("user not exist")
+            createUser(login_session)
+            user_file = session.query(User).filter_by(email = login_session['email']).first()
+            login_session['user_id'] = user_file.id
+            print("created")
+            
+        # print("user_file %s" + %user_file)
         newItem = CategoryItems(
-            title=request.form['itemName'], categoryId=category.id)
+                title=request.form['itemName'], categoryId=category.id, creatorId = user_file.id )
         session.add(newItem)
         session.commit()
+        print(str(newItem.creatorId))
         flash("New menu item have added successfully!")
         return redirect(url_for('showItems', categoryName=category.name))
     else:
@@ -377,14 +398,16 @@ def addNewCategroyItem(categoryName):
 def editCategoryItem(categoryName, itemName):
     category = session.query(Categories).filter_by(name=categoryName).first()
     categories = session.query(Categories).all()
-    print(request.method)
     if request.method == 'POST':
         print("Reach 2")
-
+        if login_session['user_id '] != category.creatorId :
+            flash("Now allowed to edit")
+            return redirect(url_for('showItem', categoryName = categoryName, itemName = itemName ))
         selectedCategory = request.form.get('category-selected')
+
         newCategory = session.query(Categories).filter_by(
             name=selectedCategory).first()
-
+    
         session.query(CategoryItems).\
             filter_by(title=itemName,
                       categoryId=category.id).\
@@ -392,14 +415,13 @@ def editCategoryItem(categoryName, itemName):
                     "description": request.form['description'],
                     "categoryId": newCategory.id})
 
-        session.commit()
-
         # Update query doesn't delete the itme id if moved, query below to delete it
         if newCategory.id != category.id:
+
             session.query(CategoryItems).filter_by(categoryId=category.id,
                                                    title=itemName).delete()
-        print("new category name :" + newCategory.name)
-        flash("Item has bean edited succefully!")
+            print("new category name :" + newCategory.name)
+            flash("Item has bean edited succefully!")
         return redirect(url_for('showItems', categoryName=selectedCategory))
     else:
         print("Reach 3")
@@ -414,13 +436,14 @@ def editCategoryItem(categoryName, itemName):
 
 @app.route('/catalog/<categoryName>/<itemName>/delete', methods=['GET', 'POST'])
 def deleteItem(categoryName, itemName):
+
     category = session.query(Categories).filter_by(name=categoryName).first()
     if request.method == 'POST':
         print("POST")
         session.query(CategoryItems).filter_by(categoryId=category.id,
                                                title=itemName).delete()
         flash("Item has been deleted!")
-        session.commit()
+    
         return redirect(url_for('showItems', categoryName=categoryName))
     else:
         print(categoryName + " " + itemName)
@@ -430,9 +453,17 @@ def deleteItem(categoryName, itemName):
 # API for all app categories info.
 @app.route('/catalog/json')
 def catalogAPI():
-  #  restaurant = session.query(Restaurant).filter_by(id = restaurant_id).one()
+    
     categories = session.query(Categories).all()
-    return jsonify(Categories=[i.serialize for i in categories])
+    items = session.query(CategoryItems).all()
+
+    CategorySerialized = [i.serialize for i in categories]
+    ItemSerialized = [b.serialize for b in items]
+    list1 = categories.append(items)
+    print(categories.append(items) )
+    print(json.dumps(list1))
+    # print(CategorySerialized)
+    return jsonify(list1)
 
 
 if __name__ == '__main__':
