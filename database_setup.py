@@ -5,16 +5,17 @@ from sqlalchemy.orm import relationship
 from sqlalchemy import create_engine
 import os
 
+
 os.chdir("D:/Documents/GitHub/Item Catalog App/")
 
 engine = create_engine('sqlite:///itemscategory.db',
                        connect_args={'check_same_thread': False})
 Base = declarative_base()
 
+
 class User(Base):
-    """ 
-    This class is to store to handle users information upon logining through the ouath gate
-    """
+    """This class is to store to handle users information upon
+    logining through the ouath gate"""
     __tablename__ = 'user'
 
     id = Column(Integer, primary_key=True)
@@ -40,9 +41,8 @@ class Categories(Base):
     :name param: name of the category
     """
     __tablename__ = 'categories'
-
     id = Column(Integer, primary_key=True)
-    name = Column(String(250), nullable=False, unique = True)
+    name = Column(String(250), nullable=False, unique=True)
 
     @property
     def serialize(self):
@@ -70,7 +70,8 @@ class CategoryItems(Base):
     categoryId = Column(Integer, ForeignKey('categories.id'))
     creatorId = Column(Integer, ForeignKey('user.id'))
     user = relationship(User)
-    categories = relationship(Categories, cascade="all, delete-orphan", single_parent=True)
+    categories = relationship(Categories, cascade="all,\
+    delete-orphan", single_parent=True)
 
     @property
     def serialize(self):
@@ -84,5 +85,7 @@ class CategoryItems(Base):
             # 'categoryName': self.categoryName,
         }
 
-""" Instead of creating a schema automatically from the SQLAlchemy, as what's shown in the previous articles using Base.metadata.create_all(engine) """
+""" Instead of creating a schema automatically from
+the SQLAlchemy, as what's shown in the previous articles
+using Base.metadata.create_all(engine) """
 Base.metadata.create_all(engine)
