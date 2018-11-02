@@ -1,3 +1,4 @@
+# coding: utf-8
 from flask import Flask
 from http.server import BaseHTTPRequestHandler, HTTPServer
 import cgi
