@@ -459,11 +459,11 @@ def catalogAPI():
 
     CategorySerialized = [i.serialize for i in categories]
     ItemSerialized = [b.serialize for b in items]
-    list1 = categories.append(items)
-    print(categories.append(items) )
-    print(json.dumps(list1))
+    # list1 = categories.append(items)
+    # print(categories.append(items) )
+    # print(json.dumps(list1))
     # print(CategorySerialized)
-    return jsonify(list1)
+    return jsonify(CategorySerialized = CategorySerialized, ItemSerialized = ItemSerialized )
 
 
 if __name__ == '__main__':
