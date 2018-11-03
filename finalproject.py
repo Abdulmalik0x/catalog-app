@@ -4,8 +4,6 @@ from http.server import BaseHTTPRequestHandler, HTTPServer
 import cgi
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
-# from sqlalchemy_dao import Dao, POOL_DEFAULT, POOL_DISABLED
-# from sqlalchemy.pool import SingletonThreadPool
 from database_setup import Categories, Base, CategoryItems, User
 from flask import (render_template,
                    url_for,
@@ -19,8 +17,7 @@ import random
 import string
 from flask_login import LoginManager
 from functools import wraps
-from oauth2client.client import flow_from_clientsecrets
-from oauth2client.client import FlowExchangeError
+from oauth2client.client import flow_from_clientsecrets, FlowExchangeError
 import httplib2
 import json
 from flask import make_response
@@ -40,7 +37,6 @@ Base.metadata.bind = engine
 DBSession = sessionmaker(bind=engine)
 session = DBSession()
 
-
 os.chdir("D:/Downloads/fsnd-virtual-machine/FSND-Virtual-Machine/vagrant/")
 CLIENT_ID = json.loads(
     open('client_secrets.json', 'r').read())['web']['client_id']
@@ -54,8 +50,8 @@ def loginOauth():
     login_session['state'] = state
     return render_template('login.html', STATE=state, CLIENT_ID=CLIENT_ID)
 
-# Facebook login oauth api
 
+# Facebook login oauth api
 
 @app.route('/fbconnect', methods=['POST'])
 def fbconnect():
