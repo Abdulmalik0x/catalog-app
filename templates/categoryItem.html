@@ -25,13 +25,14 @@
                     <p>
                         {{item.description}}
                     </p>
-                    {% if 'username' in session %}
+                    {% if session['user_id'] == item.creatorId %}
+                    
                     <span>Press to edit this item:
                         <a href="{{url_for('editCategoryItem', categoryName = itemCategory.name , itemName = item.title  )}}">
                             Edit
                         </a>
                     </span> </br>
-                    <span>Press to edit this item:
+                    <span>Press to delete this item:
                         <a href="{{url_for('deleteItem', categoryName = itemCategory.name , itemName = item.title  )}}">
                             Delete
                         </a>

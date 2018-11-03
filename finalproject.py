@@ -4,8 +4,6 @@ from http.server import BaseHTTPRequestHandler, HTTPServer
 import cgi
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
-# from sqlalchemy_dao import Dao, POOL_DEFAULT, POOL_DISABLED
-# from sqlalchemy.pool import SingletonThreadPool
 from database_setup import Categories, Base, CategoryItems, User
 from flask import (render_template,
                    url_for,
@@ -19,8 +17,7 @@ import random
 import string
 from flask_login import LoginManager
 from functools import wraps
-from oauth2client.client import flow_from_clientsecrets
-from oauth2client.client import FlowExchangeError
+from oauth2client.client import flow_from_clientsecrets, FlowExchangeError
 import httplib2
 import json
 from flask import make_response
@@ -40,7 +37,6 @@ Base.metadata.bind = engine
 DBSession = sessionmaker(bind=engine)
 session = DBSession()
 
-
 os.chdir("D:/Downloads/fsnd-virtual-machine/FSND-Virtual-Machine/vagrant/")
 CLIENT_ID = json.loads(
     open('client_secrets.json', 'r').read())['web']['client_id']
@@ -54,8 +50,8 @@ def loginOauth():
     login_session['state'] = state
     return render_template('login.html', STATE=state, CLIENT_ID=CLIENT_ID)
 
-# Facebook login oauth api
 
+# Facebook login oauth api
 
 @app.route('/fbconnect', methods=['POST'])
 def fbconnect():
@@ -125,7 +121,7 @@ def fbconnect():
     print("Reach here")
     # see if user exists
     user_id = getUserId(login_session['email'])
-    if not user_id:
+    if not user_id in login_session:
         # not tested yet, may be need serialize
         user_id = createUser(login_session)
         print("User created")
@@ -226,19 +222,16 @@ def gconnect():
     email = login_session['email']
     try:
         print("email %s" % email)
-        # print("Query : %s" % session.query(
-        # User).filter_by(email=email).first())
-        try:
-            user = session.query(User).filter_by(
-                email=login_session['email']).one()
-            if user is not None:
-                login_session['user_id'] = user.id
-                print("User already have accoun in database")
-        except:
-            pass
+        user_id = getUserId(login_session['email'])
+        if not user_id in login_session:
+            user_id = createUser(login_session)
+            print("User created")
+            login_session['user_id'] = user_id.id
     except:
         print("Error Happened")
         createUser(login_session)
+        user_id = getUserId(login_session['email'])
+        login_session['user_id'] = user_id.id
         print("New user has been added")
 
     output = ''
@@ -422,7 +415,13 @@ def addNewCategroyItem(categoryName):
 def editCategoryItem(categoryName, itemName):
     category = session.query(Categories).filter_by(name=categoryName).first()
     item = session.query(CategoryItems).filter_by(
-        title=itemName, categoryId=category.id).one()
+        title=itemName, categoryId=category.id).first()
+    print(login_session)
+    if 'user_id' in login_session != item.creatorId or \
+    not 'user_id' in login_session:
+        flash('Unauthrized')
+        return redirect(url_for('showItem', categoryName = categoryName,\
+        itemName = itemName ))
     if request.method == 'POST':
         print(item.id)
         if login_session['user_id'] != item.creatorId:
@@ -470,6 +469,11 @@ def deleteItem(categoryName, itemName):
     item = session.query(CategoryItems).filter_by(
                                         title=itemName,
                                         categoryId=category.id).one()
+    if 'user_id' in login_session != item.creatorId or \
+    not 'user_id' in login_session:
+        flash('Unauthrized')
+        return redirect(url_for('showItem', categoryName = categoryName,\
+        itemName=itemName ))
     if request.method == 'POST':
         print("POST")
         if(login_session['user_id'] == item.creatorId):
